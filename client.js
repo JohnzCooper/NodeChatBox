@@ -29,7 +29,6 @@ $("#btnSubmit").click(function () {
                             $('#chatrooms').append('<label type="button" class="form-control" style="background-color: grey">' + '#Axinom' + '</label>');
                             for (var x = 0; x < res.length; x++) {
                                 // Build out user div
-                                //var $chatrooms = $("chatrooms");
                                 if (res[x].name === userName.value) {
                                     $('#chatrooms').append('<label type="button" class="form-control" style="background-color: gold">' + res[x].name + '</label>');
                                 }
@@ -40,7 +39,7 @@ $("#btnSubmit").click(function () {
                             }
                         }
                     });
-
+                    //listing chat history
                     socket.on('chatHistory', function (res) {
                         console.log(res);
                         if (res.length > 0) {
@@ -50,7 +49,6 @@ $("#btnSubmit").click(function () {
                                 message.setAttribute('class', 'chat-message');
                                 message.textContent = res[x].dateTime + '- ' + res[x].name + ": " + res[x].message;
                                 messages.append(message);
-                                // messages.insertBefore(message, messages.firstChild);
                             }
                         }
                     });
@@ -92,18 +90,15 @@ $("#btnSubmit").click(function () {
         alert("Username can not empty and length should be less than 12 ");
     }
 });
-
+//sending chat
 $("#btnSubmitChat").click(function () {
     var textarea = $("#textarea");
     if (textarea.val().length > 0) {
-
         console.log(userName.value + textarea.value);
-
         socket.emit('inputChat', {
             name: userName.value,
             message: textarea.val()
         });
         textarea.val("");
     }
-
 });

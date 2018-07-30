@@ -1,15 +1,16 @@
+var config = require('./config.json');
 const mongo = require('mongodb').MongoClient;
-const io = require('socket.io').listen(4000).sockets;
-var CONFIG = require('./config.json');
+const io = require('socket.io').listen(config.socketPort).sockets;
 var dateTime = require('node-datetime');
 
-var dbPort = CONFIG.dbPort;
-var dbHost = CONFIG.dbHost;
-var dbName = CONFIG.dbName;
+//get bc connection details from config
+var dbPort = config.dbPort;
+var dbHost = config.dbHost;
+var dbName = config.dbName;
 
 //Connect to mongo
-mongo.connect(dbHost+dbPort,{ useNewUrlParser: true }, function(err, db){
-    if(err){
+mongo.connect(dbHost + dbPort, { useNewUrlParser: true }, function (err, db) {
+    if (err) {
         throw err;
     }
     console.log('MongoDb connected..');
@@ -17,39 +18,43 @@ mongo.connect(dbHost+dbPort,{ useNewUrlParser: true }, function(err, db){
     let users = dbo.collection('user');
     let chatHistory = dbo.collection('chatHistory');
 
-    io.on('connection', function(socket){
+    //crete socket connection
+    io.on('connection', function (socket) {
 
-        sendStatus = function(s){
-            socket.emit('status',s);
+        sendStatus = function (s) {
+            socket.emit('status', s);
         }
 
-        socket.on('login',function(data){
+        socket.on('login', function (data) {
             console.log(data);
             var query = { name: data.name };
-            users.find(query).toArray(function(error, result) {
+            //username validation
+            users.find(query).toArray(function (error, result) {
                 if (error) throw err;
 
-                if(result.length == 0 ){
+                if (result.length == 0) {
                     console.log('login success');
-                    
-                    users.insert({name: data.name, socketID: socket.id}, function(){
-                        users.find().toArray(function(err, res) {
+                    //new user intert in db
+                    users.insert({ name: data.name, socketID: socket.id }, function () {
+                        users.find().toArray(function (err, res) {
                             if (err) throw err;
                             console.log(res)
-                            io.emit('users',res);
+                            io.emit('users', res);
                         });
                     });
-                    chatHistory.find().toArray(function(err, res){
+                    //get chat history
+                    chatHistory.find().toArray(function (err, res) {
                         if (err) throw err;
-                        socket.emit('chatHistory',res);
+                        socket.emit('chatHistory', res);
                     });
                     sendStatus({
                         message: 'Successfully login to chat room',
                         status: true
                     });
-                    socket.broadcast.emit('outputLogedUser',data.name);
+                    //emit chat romm enter message
+                    socket.broadcast.emit('outputLogedUser', data.name);
                 }
-                else{
+                else {
                     sendStatus({
                         message: 'Nikc name already use',
                         status: false
@@ -58,33 +63,25 @@ mongo.connect(dbHost+dbPort,{ useNewUrlParser: true }, function(err, db){
             });
         });
 
-        socket.on('inputChat',function(data){
+        //message sending
+        socket.on('inputChat', function (data) {
             let name = data.name;
             let message = data.message;
 
             //check for name and message
-            if(name == '' || message == ''){
+            if (name == '' || message == '') {
                 sendStatus({
                     message: 'Please enter a message',
                     status: false
                 })
             }
-            else{
+            else {
                 //insert message
                 var dt = dateTime.create();
                 var formatted = dt.format('d.m.Y H:M:S');
-                // console.log(formatted);
-                // console.log(data.message);
-                chatHistory.insert({name: name, message: message, dateTime: formatted}, function(res){
+                chatHistory.insert({ name: name, message: message, dateTime: formatted }, function (res) {
                     console.log(res);
-
-                    io.emit('output', [{name: name, message: message, dateTime: formatted}]);
-
-                    //send status object
-                    // sendStatus({
-                    //     message: 'Message sent',
-                    //     clear: true
-                    // });
+                    io.emit('output', [{ name: name, message: message, dateTime: formatted }]);
                 });
             }
         });
